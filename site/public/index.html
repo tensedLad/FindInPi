@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Find in π</title>
+  <meta name="description" content="Type your birthday or phone number and see where it first appears in the first 100 billion digits of pi.">
+  <meta name="theme-color" content="#0b0d17">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://api.pi.delivery" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="glow" aria-hidden="true"></div>
+  <div class="watermark" aria-hidden="true">π</div>
+
+  <main>
+    <header class="brand">
+      <span class="brand-mark">π</span> Find in π
+    </header>
+
+    <section class="hero">
+      <h1>Is your number hiding in <span class="pi">π</span>?</h1>
+      <p class="lede">
+        Type a birthday, a phone number, anything up to 10 digits.
+        We'll show you exactly where it first appears in the first
+        <strong>100 billion digits</strong> of π.
+      </p>
+
+      <form id="search" autocomplete="off">
+        <label for="q" class="sr-only">Your number</label>
+        <div class="field">
+          <input id="q" name="q" type="text" inputmode="numeric" maxlength="18"
+                 placeholder="06062006" spellcheck="false" autofocus>
+          <span class="count" id="count">0/10</span>
+        </div>
+        <button type="submit" id="go" disabled>Search π</button>
+      </form>
+      <p class="hint">Spaces, dashes and + are ignored. Nothing you type is stored.</p>
+    </section>
+
+    <section id="stage" class="stage" hidden>
+      <div class="odometer">
+        <span class="odometer-label" id="odometer-label">Scanning digit</span>
+        <span class="odometer-value" id="counter">1</span>
+      </div>
+      <div class="tape" id="tape">
+        <div class="tape-track" id="track" aria-hidden="true"></div>
+        <div class="tape-context" id="context" aria-hidden="true"></div>
+        <div class="lens" id="lens" aria-hidden="true"></div>
+      </div>
+      <div class="result" id="result" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer>
+    Digits from <a href="https://pi.delivery/" target="_blank" rel="noopener">Google Cloud's 100 trillion digit computation</a>.
+    Positions count digits after the decimal point: in 3.14159…, the 1 is digit 1.
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

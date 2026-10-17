@@ -1,0 +1,9 @@
+{
+  "name": "find-in-pi",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node dev-server.mjs --tables ../tables",
+    "test": "node --test"
+  }
+}

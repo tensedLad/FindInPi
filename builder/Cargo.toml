@@ -1,0 +1,12 @@
+[package]
+name = "pi-index"
+version = "0.1.0"
+edition = "2021"
+description = "Builds the first-occurrence lookup tables for Find in Pi"
+
+[dependencies]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
