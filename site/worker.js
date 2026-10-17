@@ -1,11 +1,25 @@
-// Cloudflare Pages Function: POST /api/find  {"q": "9876543210"}
+// Cloudflare Worker. Static files in public/ are served by Cloudflare before
+// this runs; everything else lands here.
+//
+// POST /api/find  {"q": "9876543210"}
 // Reads a few bytes from the R2 bucket bound as PI_TABLES (see wrangler.toml).
 // The number is sent in the body rather than the URL so phone numbers don't
 // end up in URL logs.
 
-import { handleFind } from "../../lib/lookup.js";
+import { handleFind } from "./lib/lookup.js";
 
-export async function onRequestPost({ request, env }) {
+export default {
+  async fetch(request, env) {
+    const { pathname } = new URL(request.url);
+    if (pathname !== "/api/find") return new Response("Not found", { status: 404 });
+    if (request.method !== "POST") {
+      return new Response("Use POST", { status: 405, headers: { allow: "POST" } });
+    }
+    return find(request, env);
+  },
+};
+
+async function find(request, env) {
   let q;
   try {
     ({ q } = await request.json());

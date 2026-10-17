@@ -1,7 +1,11 @@
-# Cloudflare Pages project. Deploy with: npx wrangler pages deploy
-name = "find-in-pi"
-pages_build_output_dir = "public"
+# Cloudflare Worker: serves site/public and answers POST /api/find from R2.
+# Deploy with: npx wrangler deploy   (Cloudflare's Git builds run this for you)
+name = "findinpi"
+main = "site/worker.js"
 compatibility_date = "2025-09-01"
+
+[assets]
+directory = "site/public"
 
 [vars]
 PI_WIDTH = "10"                # longest searchable number; must match the tables

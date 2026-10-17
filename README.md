@@ -13,8 +13,8 @@ worked out once, ahead of time:
 - There are only 10¹⁰ ten-digit numbers. `builder/` reads Google's published
   digits of π once and records, for each number, the position where it first
   starts. That gives a 50 GB table: 10¹⁰ entries of 5 bytes each.
-- The table lives in Cloudflare R2. A search reads **5 bytes** from it with a
-  byte-range request, so every answer comes back in milliseconds and costs
+- The table lives in Cloudflare R2. A Cloudflare Worker serves the page, and
+  each search reads **5 bytes** from the table with a byte-range request, so every answer comes back in milliseconds and costs
   one R2 read.
 - Shorter numbers use the same table: every 10-digit extension of a 7-digit
   number sits in 1,000 consecutive slots, and the answer is the smallest one.
@@ -30,11 +30,12 @@ missing, and for those the site says so.
 Positions count digits after the decimal point: in 3.14159…, the `1` is digit 1.
 
 ```
+wrangler.toml     Cloudflare Worker config: R2 binding, settings
 builder/          Rust tool that builds the tables (no dependencies)
 site/
   public/         the website (plain HTML/CSS/JS)
-  functions/      Cloudflare Pages Function: POST /api/find
-  lib/lookup.js   table lookup shared by the function and the dev server
+  worker.js       Cloudflare Worker: POST /api/find
+  lib/lookup.js   table lookup shared by the Worker and the dev server
   dev-server.mjs  local server that reads tables from disk
   test/           lookup tests
 ```
@@ -45,11 +46,11 @@ site/
 |---|---|---|---|
 | R2 storage | 50 GB | 10 GB | 40 GB × $0.015 = **$0.60** |
 | R2 reads | 1 per search | 10 million | $0 (then $0.36 per million) |
-| Pages + Functions | 1 request per search | 100,000 a day | $0 |
+| Worker | 1 request per search (page files are free) | 100,000 a day | $0 |
 | Bandwidth | | always free on R2 | $0 |
 
 That's about **$0.60 a month**. Above 100,000 searches a day the free plan
-starts refusing API requests; it does not charge you.
+starts refusing searches; it does not charge you.
 
 ## 1. Build the tables (once, on your own computer)
 
@@ -108,22 +109,28 @@ You need about **100 GB of free disk** and **5 GB of RAM per thread**.
    Check that the bucket has `short/len1.bin` … `short/len5.bin`,
    `len10/0.bin` … `len10/9.bin` and `meta.json`.
 
-The bucket stays private. Only the site's function reads it.
+The bucket stays private. Only the site's Worker reads it.
 
 ## 3. Deploy the website
 
+The R2 bucket must exist before the first deploy, because the Worker is bound
+to it. The tables can be uploaded later; until then searches return an error.
+
+**From GitHub (recommended):** in Cloudflare, go to **Workers & Pages → Create
+→ Import a repository** and pick this repo. Keep the defaults: root directory
+`/` and deploy command `npx wrangler deploy`. The Worker name must be
+`findinpi`, matching `name` in `wrangler.toml`. Every push to the production
+branch redeploys.
+
+**From your computer:**
+
 ```sh
-cd site
 npx wrangler login
-npx wrangler pages deploy
+npx wrangler deploy
 ```
 
-`wrangler.toml` already binds the bucket as `PI_TABLES` and sets `PI_WIDTH`
-and `PI_DIGITS`. The site is served at `https://find-in-pi.pages.dev`; you can
-add your own domain in the Pages dashboard.
-
-You can also connect this GitHub repo in **Workers & Pages → Create → Pages**
-with root directory `site`, no build command, and output directory `public`.
+The site is served at `https://findinpi.<your-subdomain>.workers.dev`. You can
+add your own domain under the Worker's **Settings → Domains & Routes**.
 
 ## Development
 
