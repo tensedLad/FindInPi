@@ -3,6 +3,7 @@
 name = "findinpi"
 main = "site/worker.js"
 compatibility_date = "2025-09-01"
+workers_dev = true             # serve at findinpi.<subdomain>.workers.dev
 
 [assets]
 directory = "site/public"
