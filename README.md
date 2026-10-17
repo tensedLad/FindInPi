@@ -129,8 +129,8 @@ npx wrangler login
 npx wrangler deploy
 ```
 
-The site is served at `https://findinpi.<your-subdomain>.workers.dev`. You can
-add your own domain under the Worker's **Settings → Domains & Routes**.
+The site is served at **https://pi.gokrypt.in** (set by `routes` in
+`wrangler.toml`) and at `https://findinpi.<your-subdomain>.workers.dev`.
 
 ## Development
 
