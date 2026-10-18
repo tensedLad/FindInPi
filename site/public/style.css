@@ -212,7 +212,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--cool); outline-
 .result .range { color: var(--text); font-size: clamp(16px, 2.6vh, 19px); }
 .result .num { font-family: var(--mono); font-weight: 700; color: var(--accent); white-space: nowrap; }
 
-.actions { display: flex; justify-content: center; gap: 8px; margin-top: clamp(8px, 2vh, 16px); }
+.actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: clamp(8px, 2vh, 16px); }
 .actions button { height: 38px; font-size: 14px; padding: 0 16px; border-radius: 10px; }
 .actions .ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
 .actions a.button {
@@ -227,6 +227,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--cool); outline-
   text-decoration: none;
 }
 .actions a.button:hover { filter: brightness(1.08); }
+.actions a.whatsapp { gap: 6px; background: #25d366; color: #052e16; }
 
 .error { color: #ff8a8a; }
 
