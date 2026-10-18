@@ -149,7 +149,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--cool); outline-
   opacity: 0;
   transition: opacity 0.35s;
 }
-.stage.done .tape-track { opacity: 0; transition: opacity 0.25s; }
+.stage.done:not(.landed) .tape-track { opacity: 0; transition: opacity 0.25s; }
 .stage.done .tape-context { opacity: 1; }
 
 /* The found number, boxed with room to breathe around the digits. */
@@ -157,9 +157,14 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--cool); outline-
   display: inline-flex;
   margin: 0 0.3em;
   padding: 0.22em 0.3em 0.22em calc(0.3em + var(--digit-gap));
-  border: 1px solid rgba(255, 181, 71, 0.55);
+  border: 1px solid transparent;
   border-radius: 10px;
+  transition: border-color 0.35s, background-color 0.35s, box-shadow 0.35s;
+}
+.match.lit {
+  border-color: rgba(255, 181, 71, 0.55);
   background: var(--accent-soft);
+  box-shadow: 0 0 24px rgba(255, 181, 71, 0.18);
 }
 
 .match .hit {

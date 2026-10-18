@@ -93,7 +93,7 @@ async function search(q) {
     ctx: r.found ? await fetchContext(r.start, q).catch(() => null) : null,
   }));
   try {
-    const out = reduceMotion ? await answer : await animate(answer);
+    const out = reduceMotion ? await answer : await animate(q, answer);
     reveal(q, out);
   } catch (err) {
     if (err instanceof DailyLimitError) showDailyLimit();
@@ -141,29 +141,47 @@ async function fetchContext(start, q) {
 
 // ---------- animation ----------
 
+const randomDigits = (n) => Array.from({ length: n }, () => Math.floor(Math.random() * 10)).join("");
+
 function resetStage(q) {
   stage.hidden = false;
-  stage.classList.remove("done");
+  stage.classList.remove("done", "landed");
   result.replaceChildren();
   context.replaceChildren();
-  label.textContent = "Scanning digit";
-  counter.textContent = "1";
+  label.textContent = "Searching π";
+  counter.textContent = "…";
   tape.style.setProperty("--n", q.length);
   document.body.classList.add("searched");
   track.style.transform = "";
   track.style.filter = "";
+  track.textContent = "";
   if (!reduceMotion) {
-    const strip = Array.from({ length: 160 }, () => Math.floor(Math.random() * 10)).join("");
+    const strip = randomDigits(160);
     track.textContent = strip + strip; // two copies so the loop is seamless
   }
 }
 
+// Lays the real digits of pi out on the tape: `lead` filler digits to scroll
+// through, then the digits before the match, the match itself (in its box,
+// unlit until it lands) and the digits after it.
+function layOutLanding(q, ctx, lead) {
+  const hits = [...q].map((d) => el("span", { className: "hit" }, d));
+  const match = el("span", { className: "match" }, ...hits);
+  const before = ctx ? ctx.before : " ".repeat(CONTEXT);
+  const after = ctx ? ctx.after : " ".repeat(CONTEXT);
+  track.replaceChildren(randomDigits(lead) + before, match, after + randomDigits(CONTEXT));
+  // Track position that puts the middle of the match in the middle of the tape.
+  const centre = tape.clientWidth / 2 - (match.offsetLeft + match.offsetWidth / 2);
+  return { match, hits, centre };
+}
+
 const easeOutCubic = (t) => 1 - (1 - t) ** 3;
 
-// Spins the tape and odometer until `answer` settles, then glides the
-// odometer to the real position (in log space, so every order of magnitude
-// gets screen time) while the tape slows to a stop.
-function animate(answer) {
+// Spins the tape until `answer` settles. Then the counter counts up from 1 to
+// the real position (in log space, so every order of magnitude gets screen
+// time) while the tape slides through the digits of pi and stops exactly on
+// the match. Nothing ever runs backwards.
+function animate(q, answer) {
   return new Promise((resolve, reject) => {
     let settled = null;
     answer.then(
@@ -175,8 +193,7 @@ function animate(answer) {
     const t0 = performance.now();
     let last = t0;
     let offset = 0;
-    let value = 1;
-    let glide = null; // { t0, duration, from, to }
+    let glide = null; // { t0, duration, to, fromX, distance }
 
     const frame = (now) => {
       const dt = (now - last) / 1000;
@@ -189,34 +206,38 @@ function animate(answer) {
         return reject(settled.error);
       }
       if (!glide && settled && elapsed >= MIN_SPIN_MS) {
-        const r = settled.value.r;
+        const { r, ctx } = settled.value;
         const to = r.found ? r.start : r.digitsSearched;
-        glide = {
-          t0: now,
-          duration: Math.min(3400, Math.max(1600, 1300 + 180 * Math.log10(to))),
-          from: Math.log(value),
-          to: Math.log(to),
-        };
+        const duration = Math.min(3200, Math.max(1300, 1100 + 260 * Math.log10(to)));
+        // Starting at full speed, an ease-out over `duration` covers a third of
+        // speed × time, so that is how far back the tape has to start.
+        const distance = (TOP_SPEED * duration) / 1000 / 3;
+        glide = { t0: now, duration, to, distance };
+        label.textContent = "Scanning digit";
+        if (r.found) {
+          const charWidth = loopWidth / 160;
+          const lead = Math.ceil((distance + tape.clientWidth) / charWidth);
+          glide.landing = layOutLanding(q, ctx, lead);
+          glide.fromX = glide.landing.centre + distance;
+        } else {
+          glide.fromX = -offset;
+        }
       }
 
       if (glide) {
         const t = Math.min(1, (now - glide.t0) / glide.duration);
-        value = Math.exp(glide.from + (glide.to - glide.from) * easeOutCubic(t));
+        const eased = easeOutCubic(t);
         speed = TOP_SPEED * (1 - t) ** 2;
-        if (t === 1) {
-          counter.textContent = fmt.format(Math.round(value));
-          track.style.filter = "";
-          return resolve(settled.value);
-        }
+        counter.textContent = fmt.format(Math.max(1, Math.round(glide.to ** eased)));
+        track.style.transform = `translateX(${glide.fromX - glide.distance * eased}px)`;
+        track.style.filter = speed > 40 ? `blur(${(speed / TOP_SPEED) * 2.5}px)` : "";
+        if (t === 1) return resolve({ ...settled.value, landing: glide.landing });
       } else {
         speed = TOP_SPEED * Math.min(1, elapsed / 600);
-        value = Math.max(value, 10 ** (elapsed / 400)); // climbs while we wait
+        offset = (offset + speed * dt) % loopWidth;
+        track.style.transform = `translateX(${-offset}px)`;
+        track.style.filter = `blur(${(speed / TOP_SPEED) * 2.5}px)`;
       }
-
-      offset = (offset + speed * dt) % loopWidth;
-      track.style.transform = `translateX(${-offset}px)`;
-      track.style.filter = `blur(${(speed / TOP_SPEED) * 2.5}px)`;
-      counter.textContent = fmt.format(Math.round(value));
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
@@ -234,7 +255,7 @@ function el(tag, attrs = {}, ...children) {
 
 const num = (text) => el("span", { className: "num" }, text);
 
-function reveal(q, { r, ctx }) {
+function reveal(q, { r, ctx, landing }) {
   stage.classList.add("done");
   const k = q.length;
 
@@ -255,13 +276,16 @@ function reveal(q, { r, ctx }) {
   label.textContent = "Starts at digit";
   counter.textContent = fmt.format(r.start);
 
-  const hits = [...q].map((d) => el("span", { className: "hit" }, d));
-  const match = el("span", { className: "match" }, ...hits);
-  if (ctx) context.replaceChildren(ctx.before, match, ctx.after);
-  else context.replaceChildren(match);
-  hits.forEach((h, i) => {
+  // The tape has already stopped on the match; without motion, put it there now.
+  if (!landing) {
+    landing = layOutLanding(q, ctx, 0);
+    track.style.transform = `translateX(${landing.centre}px)`;
+  }
+  stage.classList.add("landed");
+  landing.match.classList.add("lit");
+  landing.hits.forEach((h, i) => {
     if (reduceMotion) h.classList.add("on");
-    else setTimeout(() => h.classList.add("on"), 250 + i * 80);
+    else setTimeout(() => h.classList.add("on"), 120 + i * 70);
   });
 
   result.replaceChildren(
@@ -306,7 +330,7 @@ function showDailyLimit() {
   reset.setUTCHours(24, 0, 0, 0);
   const at = reset.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   counter.textContent = at;
-  context.replaceChildren(el("span", { className: "match" },
+  context.replaceChildren(el("span", { className: "match lit" },
     ..."π☕".split("").map((c) => el("span", { className: "hit on" }, c))));
 
   const ok = el("button", { type: "button", className: "ghost", textContent: "OK" });
