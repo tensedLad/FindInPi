@@ -47,10 +47,15 @@ input.addEventListener("beforeinput", (event) => {
 });
 
 let lastDigits = "";
+let minusTyped = false;
 
 input.addEventListener("input", (event) => {
   const digits = input.value.replace(/\D/g, "");
   const pasted = event.inputType === "insertFromPaste" || event.inputType === "insertFromDrop";
+  // A minus in front of the number (not a dash inside a phone number).
+  if (/^\s*[-−–]/.test(input.value)) minusTyped = true;
+  else if (!digits) minusTyped = false;
+
   if (digits.length > MAX_DIGITS && pasted) {
     // Usually a phone number with a country code: keep the local part.
     hint.textContent = `Kept the last ${MAX_DIGITS} digits (${digits.slice(0, -MAX_DIGITS)} dropped).`;
@@ -59,7 +64,9 @@ input.addEventListener("input", (event) => {
     // A keyboard that ignored beforeinput: undo the extra digit.
     setDigits(lastDigits);
   } else {
-    hint.textContent = defaultHint;
+    hint.textContent = minusTyped
+      ? `π has no minus sign, so this searches ${digits || "just the digits"}.`
+      : defaultHint;
     setDigits(digits);
   }
 });
