@@ -4,7 +4,7 @@ const TOP_SPEED = 2600; // tape speed in px/s
 const MIN_SPIN_MS = 700;
 // Your "Buy me a coffee" page, e.g. "https://buymeacoffee.com/yourname".
 // Leave empty to hide the coffee links.
-const SUPPORT_URL = "";
+const SUPPORT_URL = "https://buymeacoffee.com/tensedlad";
 
 const fmt = new Intl.NumberFormat();
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
