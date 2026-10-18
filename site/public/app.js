@@ -52,6 +52,7 @@ form.addEventListener("submit", async (event) => {
   const q = input.value;
   if (!q || busy) return;
   busy = true;
+  input.blur(); // closes the phone keyboard so the result has the whole screen
   setDigits(q);
   try {
     await search(q);
@@ -130,14 +131,14 @@ function resetStage(q) {
   context.replaceChildren();
   label.textContent = "Scanning digit";
   counter.textContent = "1";
-  tape.style.setProperty("--lens", `${q.length}ch`);
+  tape.style.setProperty("--n", q.length);
+  document.body.classList.add("searched");
   track.style.transform = "";
   track.style.filter = "";
   if (!reduceMotion) {
     const strip = Array.from({ length: 160 }, () => Math.floor(Math.random() * 10)).join("");
     track.textContent = strip + strip; // two copies so the loop is seamless
   }
-  stage.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
 }
 
 const easeOutCubic = (t) => 1 - (1 - t) ** 3;
@@ -238,24 +239,17 @@ function reveal(q, { r, ctx }) {
   counter.textContent = fmt.format(r.start);
 
   const hits = [...q].map((d) => el("span", { className: "hit" }, d));
-  if (ctx) context.replaceChildren(ctx.before, ...hits, ctx.after);
-  else context.replaceChildren(...hits);
+  const match = el("span", { className: "match" }, ...hits);
+  if (ctx) context.replaceChildren(ctx.before, match, ctx.after);
+  else context.replaceChildren(match);
   hits.forEach((h, i) => {
     if (reduceMotion) h.classList.add("on");
     else setTimeout(() => h.classList.add("on"), 250 + i * 80);
   });
 
-  const share = Math.min(99.9, (1 - Math.exp(-r.start / 10 ** k)) * 100);
-  const pct = share < 10 ? share.toFixed(1) : Math.round(share);
-  const odds = share < 25
-    ? `Lucky! Only about ${pct}% of ${k}-digit numbers show up this early in π.`
-    : `About ${pct}% of ${k}-digit numbers show up this early in π.`;
-
   result.replaceChildren(
-    el("h2", {}, "Found it!"),
-    el("p", { className: "range" }, "Your number ", num(q), " is in π from digit ",
-      num(fmt.format(r.start)), " to digit ", num(fmt.format(r.end)), "."),
-    el("p", { className: "odds" }, odds),
+    el("p", { className: "range" }, num(q), " is in π from digit ",
+      num(fmt.format(r.start)), " to ", num(fmt.format(r.end)), "."),
     actions(`My number ${q} is in π, from digit ${fmt.format(r.start)} to digit ${fmt.format(r.end)}! Find yours: ${location.origin}`)
   );
 }
@@ -295,8 +289,8 @@ function showDailyLimit() {
   reset.setUTCHours(24, 0, 0, 0);
   const at = reset.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   counter.textContent = at;
-  tape.style.setProperty("--lens", "2ch");
-  context.replaceChildren(..."π☕".split("").map((c) => el("span", { className: "hit on" }, c)));
+  context.replaceChildren(el("span", { className: "match" },
+    ..."π☕".split("").map((c) => el("span", { className: "hit on" }, c))));
 
   const ok = el("button", { type: "button", className: "ghost", textContent: "OK" });
   ok.addEventListener("click", () => {
@@ -306,9 +300,7 @@ function showDailyLimit() {
     el("h2", {}, "π is taking a coffee break"),
     el("p", {}, `So many people searched today that the free daily searches are used up. `,
       `This site runs on free hosting to keep it online for almost nothing, and searches start again at ${at}.`),
-    SUPPORT_URL
-      ? el("p", { className: "odds" }, "If you'd like to help keep it running, a coffee goes a long way.")
-      : "",
+    SUPPORT_URL ? el("p", {}, "If you'd like to help keep it running, a coffee goes a long way.") : "",
     el("div", { className: "actions" }, ...(SUPPORT_URL ? [coffeeLink("☕ Buy me a coffee")] : []), ok)
   );
 }
@@ -321,8 +313,7 @@ function showError(message) {
 
 if (SUPPORT_URL) {
   document.querySelector("footer").append(
-    el("p", {}, "Enjoying this? ", el("a", { href: SUPPORT_URL, target: "_blank", rel: "noopener" }, "Buy me a coffee ☕"),
-      " to keep it running.")
+    " · ", el("a", { href: SUPPORT_URL, target: "_blank", rel: "noopener" }, "Buy me a coffee ☕")
   );
 }
 

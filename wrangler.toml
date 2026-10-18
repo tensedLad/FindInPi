@@ -19,3 +19,13 @@ PI_DIGITS = "100000000000"     # how many digits the tables were built from
 [[r2_buckets]]
 binding = "PI_TABLES"
 bucket_name = "find-in-pi-tables"
+
+# Worker Previews (built for every push). The Worker only reads the tables,
+# so previews can safely share the production bucket and settings.
+[previews.vars]
+PI_WIDTH = "10"
+PI_DIGITS = "100000000000"
+
+[[previews.r2_buckets]]
+binding = "PI_TABLES"
+bucket_name = "find-in-pi-tables"

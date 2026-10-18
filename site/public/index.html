@@ -14,21 +14,10 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="glow" aria-hidden="true"></div>
-  <div class="watermark" aria-hidden="true">π</div>
-
   <main>
-    <header class="brand">
-      <span class="brand-mark">π</span> Find in π
-    </header>
-
     <section class="hero">
       <h1>Is your number hiding in <span class="pi">π</span>?</h1>
-      <p class="lede">
-        Type a birthday, a phone number, anything up to 10 digits.
-        We'll show you exactly where it first appears in the first
-        <strong>100 billion digits</strong> of π.
-      </p>
+      <p class="lede">Any number up to 10 digits, in the first 100 billion digits of π.</p>
 
       <form id="search" autocomplete="off">
         <label for="q" class="sr-only">Your number</label>
@@ -37,9 +26,9 @@
                  placeholder="06062006" spellcheck="false" autofocus>
           <span class="count" id="count">0/10</span>
         </div>
-        <button type="submit" id="go" disabled>Search π</button>
+        <button type="submit" id="go" disabled>Search</button>
       </form>
-      <p class="hint">Spaces, dashes and + are ignored. Nothing you type is stored.</p>
+      <p class="hint">Nothing you type is stored.</p>
     </section>
 
     <section id="stage" class="stage" hidden>
@@ -50,15 +39,15 @@
       <div class="tape" id="tape">
         <div class="tape-track" id="track" aria-hidden="true"></div>
         <div class="tape-context" id="context" aria-hidden="true"></div>
-        <div class="lens" id="lens" aria-hidden="true"></div>
+        <div class="lens" aria-hidden="true"></div>
       </div>
       <div class="result" id="result" aria-live="polite"></div>
     </section>
   </main>
 
   <footer>
-    Digits from <a href="https://pi.delivery/" target="_blank" rel="noopener">Google Cloud's 100 trillion digit computation</a>.
-    Positions count digits after the decimal point: in 3.14159…, the 1 is digit 1.
+    Digits from <a href="https://pi.delivery/" target="_blank" rel="noopener">Google Cloud</a>
+    · digit 1 is the first digit after “3.”
   </footer>
 
   <script type="module" src="app.js"></script>
