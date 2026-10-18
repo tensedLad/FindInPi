@@ -1,5 +1,7 @@
 # Find in π
 
+**Live at https://pi.gokrypt.in**
+
 Type a birthday or phone number (up to 10 digits) and see where it first
 appears in the first 100 billion digits of π:
 
@@ -127,8 +129,8 @@ to it. The tables can be uploaded later; until then searches return an error.
 **From GitHub (recommended):** in Cloudflare, go to **Workers & Pages → Create
 → Import a repository** and pick this repo. Keep the defaults: root directory
 `/` and deploy command `npx wrangler deploy`. The Worker name must be
-`findinpi`, matching `name` in `wrangler.toml`. Every push to the production
-branch redeploys.
+`findinpi`, matching `name` in `wrangler.toml`. Every push to `main` (the
+production branch) redeploys.
 
 **From your computer:**
 
