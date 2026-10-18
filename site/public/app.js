@@ -30,17 +30,34 @@ let busy = false;
 
 function setDigits(digits) {
   input.value = digits;
+  lastDigits = digits;
   count.textContent = `${digits.length}/${MAX_DIGITS}`;
   count.classList.toggle("full", digits.length === MAX_DIGITS);
   go.disabled = busy || digits.length === 0;
 }
 
-input.addEventListener("input", () => {
+const digitCount = (text) => text.replace(/\D/g, "").length;
+
+// Typing stops at MAX_DIGITS: refuse keystrokes that would add an extra digit.
+input.addEventListener("beforeinput", (event) => {
+  if (event.inputType !== "insertText" || !event.data) return;
+  const { selectionStart: from, selectionEnd: to, value } = input;
+  const after = digitCount(value) - digitCount(value.slice(from, to)) + digitCount(event.data);
+  if (after > MAX_DIGITS) event.preventDefault();
+});
+
+let lastDigits = "";
+
+input.addEventListener("input", (event) => {
   const digits = input.value.replace(/\D/g, "");
-  if (digits.length > MAX_DIGITS) {
-    // Usually a pasted number with a country code: keep the local part.
+  const pasted = event.inputType === "insertFromPaste" || event.inputType === "insertFromDrop";
+  if (digits.length > MAX_DIGITS && pasted) {
+    // Usually a phone number with a country code: keep the local part.
     hint.textContent = `Kept the last ${MAX_DIGITS} digits (${digits.slice(0, -MAX_DIGITS)} dropped).`;
     setDigits(digits.slice(-MAX_DIGITS));
+  } else if (digits.length > MAX_DIGITS) {
+    // A keyboard that ignored beforeinput: undo the extra digit.
+    setDigits(lastDigits);
   } else {
     hint.textContent = defaultHint;
     setDigits(digits);
