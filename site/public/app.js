@@ -298,11 +298,14 @@ function reveal(q, { r, ctx, landing }) {
   result.replaceChildren(
     el("p", { className: "range" }, num(q), " is in π from digit ",
       num(fmt.format(r.start)), " to ", num(fmt.format(r.end)), "."),
-    actions(`My number ${q} is in π, from digit ${fmt.format(r.start)} to digit ${fmt.format(r.end)}! Find yours: ${location.origin}`)
+    actions(
+      `My number ${q} is in π, from digit ${fmt.format(r.start)} to digit ${fmt.format(r.end)}! Find yours: ${location.origin}`,
+      drawStory(q, r, ctx) // start drawing now so sharing is instant on tap
+    )
   );
 }
 
-function actions(shareText) {
+function actions(shareText, story) {
   const again = el("button", { type: "button", className: "ghost", textContent: "Search another" });
   again.addEventListener("click", () => {
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
@@ -333,7 +336,9 @@ function actions(shareText) {
     }
     setTimeout(() => (copy.textContent = "Copy"), 1800);
   });
-  return el("div", { className: "actions" }, whatsapp, copy, again);
+  const buttons = [whatsapp];
+  if (story) buttons.push(storyButton(story));
+  return el("div", { className: "actions" }, ...buttons, copy, again);
 }
 
 const WHATSAPP_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2l-.4-.3Z"/></svg>';
@@ -380,3 +385,144 @@ if (SUPPORT_URL) {
 }
 
 setDigits(input.value.replace(/\D/g, "").slice(0, MAX_DIGITS));
+
+// ---------- story image ----------
+
+const STORY_W = 1080;
+const STORY_H = 1920;
+const SANS = '"Space Grotesk", system-ui, sans-serif';
+const MONO = '"JetBrains Mono", ui-monospace, monospace';
+
+// Draws a 1080×1920 Instagram Story card for the result; resolves to a PNG.
+async function drawStory(q, r, ctx) {
+  await Promise.all(
+    [`700 100px ${MONO}`, `400 40px ${SANS}`, `600 40px ${SANS}`, `700 40px ${SANS}`].map((f) =>
+      document.fonts.load(f).catch(() => {})
+    )
+  );
+  const canvas = document.createElement("canvas");
+  canvas.width = STORY_W;
+  canvas.height = STORY_H;
+  const g = canvas.getContext("2d");
+  const css = getComputedStyle(document.documentElement);
+  const color = (name) => css.getPropertyValue(name).trim();
+
+  g.fillStyle = color("--bg");
+  g.fillRect(0, 0, STORY_W, STORY_H);
+  const glow = g.createRadialGradient(STORY_W / 2, 880, 0, STORY_W / 2, 880, 620);
+  glow.addColorStop(0, "rgba(255, 181, 71, 0.10)");
+  glow.addColorStop(1, "rgba(255, 181, 71, 0)");
+  g.fillStyle = glow;
+  g.fillRect(0, 0, STORY_W, STORY_H);
+
+  g.textAlign = "center";
+  g.textBaseline = "alphabetic";
+  const text = (str, y, font, fill) => {
+    g.font = font;
+    g.fillStyle = fill;
+    g.fillText(str, STORY_W / 2, y);
+  };
+
+  // Header, kept below Instagram's top bar.
+  g.font = `600 44px ${SANS}`;
+  const head = "Find in ";
+  const headW = g.measureText(head).width;
+  g.font = "400 52px Georgia, serif";
+  const piW = g.measureText("π").width;
+  const headX = (STORY_W - headW - piW) / 2;
+  g.textAlign = "left";
+  g.font = `600 44px ${SANS}`;
+  g.fillStyle = color("--muted");
+  g.fillText(head, headX, 300);
+  g.font = "400 52px Georgia, serif";
+  g.fillStyle = color("--accent");
+  g.fillText("π", headX + headW, 300);
+  g.textAlign = "center";
+
+  text("MY NUMBER IS IN π", 690, `600 32px ${SANS}`, color("--faint"));
+
+  // The tape: real digits of pi around the number, the number boxed.
+  const size = Math.min(92, 880 / (q.length * 0.68 + 0.9));
+  const gap = size * 0.08;
+  const y = 880;
+  g.font = `700 ${size}px ${MONO}`;
+  g.textAlign = "left";
+  g.textBaseline = "middle";
+  const advance = g.measureText("0").width + gap;
+  const pad = size * 0.3;
+  const boxW = q.length * advance + gap + pad * 2;
+  const boxH = size * 1.45;
+  const boxX = (STORY_W - boxW) / 2;
+
+  const before = ctx ? ctx.before : "";
+  const after = ctx ? ctx.after : "";
+  // Real digits of pi either side of the box, fading out towards the edges.
+  const margin = size * 0.3;
+  const side = (chars, startX, step) => {
+    chars.forEach((ch, i) => {
+      const x = startX + i * step;
+      const room = step < 0 ? x : STORY_W - x - advance;
+      if (room < 0) return;
+      g.globalAlpha = Math.min(1, room / (STORY_W / 2 - boxW / 2)) * 0.9;
+      g.fillText(ch, x, y);
+    });
+    g.globalAlpha = 1;
+  };
+  g.fillStyle = color("--faint");
+  side([...before].reverse(), boxX - margin - advance, -advance);
+  side([...after], boxX + boxW + margin + gap, advance);
+
+  g.beginPath();
+  g.roundRect(boxX, y - boxH / 2, boxW, boxH, size * 0.2);
+  g.fillStyle = "rgba(255, 181, 71, 0.12)";
+  g.fill();
+  g.lineWidth = 3;
+  g.strokeStyle = "rgba(255, 181, 71, 0.6)";
+  g.stroke();
+  g.fillStyle = color("--accent");
+  g.shadowColor = "rgba(255, 181, 71, 0.45)";
+  g.shadowBlur = 24;
+  [...q].forEach((ch, i) => g.fillText(ch, boxX + pad + gap + i * advance, y));
+  g.shadowBlur = 0;
+
+  g.textAlign = "center";
+  g.textBaseline = "alphabetic";
+  text("starting at digit", 1110, `400 42px ${SANS}`, color("--muted"));
+  text(fmt.format(r.start), 1240, `700 ${Math.min(116, 1500 / fmt.format(r.start).length)}px ${MONO}`, color("--accent"));
+  if (r.end > r.start) text(`through digit ${fmt.format(r.end)}`, 1320, `400 38px ${SANS}`, color("--muted"));
+
+  // Footer, kept above Instagram's reply bar.
+  text("Find yours at", 1600, `400 36px ${SANS}`, color("--faint"));
+  text(location.host, 1670, `700 54px ${SANS}`, color("--text"));
+
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Couldn't draw the image"))), "image/png")
+  );
+}
+
+function storyButton(story) {
+  const button = el("button", { type: "button", className: "ghost", textContent: "Story" });
+  button.ariaLabel = "Share as an Instagram Story image";
+  let blob = null;
+  story.then((b) => (blob = b), () => (button.hidden = true));
+
+  button.addEventListener("click", async () => {
+    // Phones get the share sheet (pick Instagram → Story); computers download.
+    const file = new File([blob ?? (await story)], "find-in-pi.png", { type: "image/png" });
+    const touch = matchMedia("(pointer: coarse)").matches;
+    if (touch && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
+        return;
+      } catch (err) {
+        if (err.name === "AbortError") return;
+      }
+    }
+    const link = el("a", { href: URL.createObjectURL(file), download: file.name });
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
+    button.textContent = "Saved!";
+    setTimeout(() => (button.textContent = "Story"), 1800);
+  });
+  return button;
+}
