@@ -52,6 +52,14 @@ site/
 That's about **$0.60 a month**. Above 100,000 searches a day the free plan
 starts refusing searches; it does not charge you.
 
+**The bill can't go above about $0.60** while the account is on the free
+Workers plan. That plan allows at most 100,000 searches a day, about 3.1
+million a month, which is well under R2's 10 million free reads. When the
+daily limit is hit, the site shows a "π is taking a coffee break" message
+with the time searches resume (midnight UTC). Set `SUPPORT_URL` in
+`site/public/app.js` to add a "Buy me a coffee" button to that message and
+the footer.
+
 ## 1. Build the tables (once, on your own computer)
 
 You need about **100 GB of free disk** and **5 GB of RAM per thread**.

@@ -251,6 +251,18 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--cool); outline-
 .actions { display: flex; justify-content: center; gap: 10px; margin-top: 18px; }
 .actions button { height: 44px; font-size: 15px; padding: 0 18px; }
 .actions .ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+.actions a.button {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #1b1405;
+  font: 700 15px var(--sans);
+  text-decoration: none;
+}
+.actions a.button:hover { filter: brightness(1.08); }
 
 .error { color: #ff8a8a; }
 
@@ -262,6 +274,7 @@ footer {
   font-size: 13px;
 }
 footer a { color: var(--muted); }
+footer p { margin: 8px 0 0; }
 
 .sr-only {
   position: absolute;

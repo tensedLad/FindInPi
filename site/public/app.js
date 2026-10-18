@@ -2,6 +2,9 @@ const MAX_DIGITS = 10;
 const CONTEXT = 24; // digits of pi shown on each side of the match
 const TOP_SPEED = 2600; // tape speed in px/s
 const MIN_SPIN_MS = 700;
+// Your "Buy me a coffee" page, e.g. "https://buymeacoffee.com/yourname".
+// Leave empty to hide the coffee links.
+const SUPPORT_URL = "";
 
 const fmt = new Intl.NumberFormat();
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -60,6 +63,11 @@ form.addEventListener("submit", async (event) => {
 
 // ---------- search ----------
 
+// Cloudflare's free plan allows 100,000 searches a day. Past that it answers
+// with its own error page (429 / error 1027) instead of our JSON, which is
+// what keeps the monthly bill capped.
+class DailyLimitError extends Error {}
+
 async function search(q) {
   resetStage(q);
   const answer = postJSON("/api/find", { q }).then(async (r) => ({
@@ -70,7 +78,8 @@ async function search(q) {
     const out = reduceMotion ? await answer : await animate(answer);
     reveal(q, out);
   } catch (err) {
-    showError(err.message || "Something went wrong. Try again?");
+    if (err instanceof DailyLimitError) showDailyLimit();
+    else showError(err.message || "Something went wrong. Try again?");
   }
 }
 
@@ -84,6 +93,12 @@ async function postJSON(url, body) {
     });
   } catch {
     throw new Error("Couldn't reach the server. Check your connection and try again.");
+  }
+  if (res.status === 429) throw new DailyLimitError();
+  if (!(res.headers.get("content-type") || "").includes("application/json")) {
+    const page = await res.text().catch(() => "");
+    if (page.includes("1027")) throw new DailyLimitError();
+    throw new Error("The site is having trouble right now. Try again in a minute.");
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `The server answered ${res.status}.`);
@@ -267,10 +282,48 @@ function actions(shareText) {
   return el("div", { className: "actions" }, copy, again);
 }
 
+function coffeeLink(text) {
+  return el("a", { className: "button coffee", href: SUPPORT_URL, target: "_blank", rel: "noopener", textContent: text });
+}
+
+function showDailyLimit() {
+  track.style.filter = "";
+  stage.classList.add("done");
+  label.textContent = "Back at";
+  // The free plan's counter resets at midnight UTC; show that in local time.
+  const reset = new Date();
+  reset.setUTCHours(24, 0, 0, 0);
+  const at = reset.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  counter.textContent = at;
+  tape.style.setProperty("--lens", "2ch");
+  context.replaceChildren(..."π☕".split("").map((c) => el("span", { className: "hit on" }, c)));
+
+  const ok = el("button", { type: "button", className: "ghost", textContent: "OK" });
+  ok.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  });
+  result.replaceChildren(
+    el("h2", {}, "π is taking a coffee break"),
+    el("p", {}, `So many people searched today that the free daily searches are used up. `,
+      `This site runs on free hosting to keep it online for almost nothing, and searches start again at ${at}.`),
+    SUPPORT_URL
+      ? el("p", { className: "odds" }, "If you'd like to help keep it running, a coffee goes a long way.")
+      : "",
+    el("div", { className: "actions" }, ...(SUPPORT_URL ? [coffeeLink("☕ Buy me a coffee")] : []), ok)
+  );
+}
+
 function showError(message) {
   track.style.filter = "";
   label.textContent = "Search stopped";
   result.replaceChildren(el("p", { className: "error", textContent: message }), actions(null));
+}
+
+if (SUPPORT_URL) {
+  document.querySelector("footer").append(
+    el("p", {}, "Enjoying this? ", el("a", { href: SUPPORT_URL, target: "_blank", rel: "noopener" }, "Buy me a coffee ☕"),
+      " to keep it running.")
+  );
 }
 
 setDigits(input.value.replace(/\D/g, "").slice(0, MAX_DIGITS));
